@@ -64,3 +64,5 @@ jobs:
           git add resourcepack.zip
           git commit -m "Update resource pack with CookingPlugin"
           git push
+
+# trigger
