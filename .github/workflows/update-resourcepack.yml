@@ -20,7 +20,7 @@ jobs:
           python3 - <<'PY'
           import base64, hashlib, pathlib, shutil, zipfile
           root = pathlib.Path(".")
-          names = ["part_00a","part_00b","part_00c","part_01","part_02","part_03"]
+          names = ["part_00a","part_00b","part_00c","part_01","part_02a","part_02b","part_02c","part_02d","part_02e","part_03"]
           for n in names:
               s=(root/".rp_patch"/n).read_text().strip()
               print(n, len(s), hashlib.sha256(s.encode()).hexdigest())
@@ -68,4 +68,4 @@ jobs:
           git commit -m "Update resource pack with CookingPlugin"
           git push
 
-# trigger 2
+# trigger 3
