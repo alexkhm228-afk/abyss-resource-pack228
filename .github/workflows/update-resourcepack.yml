@@ -1,0 +1,66 @@
+name: Update resource pack
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/update-resourcepack.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rebuild resourcepack.zip
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, pathlib, shutil, zipfile
+          root = pathlib.Path(".")
+          names = ["part_00a","part_00b","part_00c","part_01","part_02","part_03"]
+          b64 = "".join((root/".rp_patch"/n).read_text().strip() for n in names)
+          patch = base64.b64decode(b64)
+          expected = "5be79f584484a4ad4ee033eb8708c11b0951448f4a139eead7173d142d49fecb"
+          got = hashlib.sha256(patch).hexdigest()
+          if got != expected:
+              raise SystemExit(f"patch sha256 mismatch: {got}")
+          pathlib.Path("patch.zip").write_bytes(patch)
+
+          build = pathlib.Path("_pack_build")
+          if build.exists():
+              shutil.rmtree(build)
+          build.mkdir()
+
+          with zipfile.ZipFile("resourcepack.zip") as z:
+              z.extractall(build)
+          with zipfile.ZipFile("patch.zip") as z:
+              z.extractall(build)
+
+          for extra in ("MODEL_DATA_MAP.json", "README_RU.txt"):
+              p = build / extra
+              if p.exists():
+                  p.unlink()
+
+          out = pathlib.Path("resourcepack.new.zip")
+          if out.exists():
+              out.unlink()
+          with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+              for p in sorted(build.rglob("*")):
+                  if p.is_file():
+                      z.write(p, p.relative_to(build).as_posix())
+          shutil.move(out, "resourcepack.zip")
+          PY
+          unzip -t resourcepack.zip
+          sha1sum resourcepack.zip
+
+      - name: Commit updated pack
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add resourcepack.zip
+          git commit -m "Update resource pack with CookingPlugin"
+          git push
